@@ -54,15 +54,7 @@ def db_con(old_d):
     return text
 
 def deconvert(result):
-    new_result = {}
-
-    new_result['blog'] = result['blog'].split(':::')[1:]
-    new_result['tittle'] = result['tittle'].split(':::')[1:]
-    new_result['category'] = result['category'].split(':::')[1:]
-    new_result['votes'] = result['votes'].split(':::')[1:]
-    new_result['price'] = result['price'].split(':::')[1:]
-
-    return new_result
+    return result.split(':::')[1:]
 
 
 def category(blog_list):

@@ -1,4 +1,5 @@
 import os
+from collections import Counter
 
 from flask import Flask, url_for, redirect, request, render_template, abort
 
@@ -15,7 +16,7 @@ from datetime import datetime
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from steemit import get_url, vesting_calculator, ff_count, vote_count, blog_list , convert
+from steemit import get_url, vesting_calculator, ff_count, vote_count, blog_list, convert, deconvert
 
 app = Flask(__name__)
 
@@ -202,7 +203,7 @@ def details(username):
         return redirect('/')
     
     if Steemit_User().get_users(username):
-        pass #get db
+        return redirect('/{}/analiysis/1'.format(username))
     else:
         #
         user = Steemit_User()
@@ -229,10 +230,46 @@ def details(username):
         db.session.add(user)
         db.session.commit()
 
-        
+    return redirect('/{}/analiysis/1'.format(username))
 
-    return render_template('index.html', data=username)
 
+@app.route('/<username>/analiysis/', defaults={'count': 1})
+@app.route('/<username>/analiysis/<int:count>')
+def analiysis(username, count):
+    if username.startswith("@"):
+        username = username.replace("@", "")
+    user = Steemit_User().get_users(username)
+    if not user:
+        abort(404)
+
+    analiysis = Analiysis.query.filter_by(steemit_user=user).all()[count-1]
+
+    result = {
+        "blog": deconvert(analiysis.blog),
+        "tittle": deconvert(analiysis.tittle),
+        "category": deconvert(analiysis.category),
+        "votes": [float(x) for x in deconvert(analiysis.votes)],
+        "price": [float(x) for x in deconvert(analiysis.price)],
+        "end_date": analiysis.end_date,
+        "start_date": analiysis.start_date,
+        "sp": analiysis.sp,
+        "followers": analiysis.followers,
+        "following": analiysis.following,
+        "all_post": analiysis.post,
+        "sum_votes": sum([float(x) for x in deconvert(analiysis.votes)]),
+        "sum_price": sum([float(x) for x in deconvert(analiysis.price)]),
+        "sum_blog": len(deconvert(analiysis.blog))
+    }
+
+    result['votes_max_id'] = result['votes'].index(max(result['votes']))
+    result['price_max_id'] = result['price'].index(max(result['price']))
+
+    counter = Counter(result['category'])
+    result['cetegory_uniqe'] = counter.keys()
+    result['cetegory_max'] = max(result['cetegory_uniqe'])
+    result['cetegory_max_int'] = counter[result['cetegory_max']]
+    
+    return render_template('index.html', result=result)
 # Initialize flask-login
 init_login()
 

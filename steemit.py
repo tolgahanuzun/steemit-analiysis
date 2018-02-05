@@ -1,42 +1,91 @@
 import requests
+from datetime import datetime
+VESTING_URL = 'http://www.steemdollar.com/vests.php'
 
 def parse_url(url):
     _url = url.split('@')[1].split('/')
     return _url[0], _url[1]
 
-def test_url(url):
-    status = False
-    valid = 'https://steemit'
-    if not valid == url.split('.com')[0]:
-        return status
+def get_url(url):
+    link = "https://steemit.com/@{}.json".format(url)
+    response = requests.get(link)
 
-    link = "{}.json".format(url)
-    if requests.get(link).status_code == 200:
-        status = True
-    return status
+    if response.status_code == 200:
+        return True , response.json()
 
-def post_comment(url):
-    author, permlink = parse_url(url)
-    api_link = 'https://api.steemjs.com/get_content_replies?author={}&permlink={}'.format(
-        author, permlink)
+    return False, None
 
-    comments = requests.get(api_link).json()
-    comment_list = [comment['author'] for comment in comments]
+def blog_list(author):
+    url = 'https://api.steemjs.com/get_discussions_by_blog?query={'  + '"tag":"{}","limit": "50"'.format(author) + "}"
+    data = requests.get(url).json()
 
-    return comment_list
+    result = {
+        'blog':[],
+        'tittle':[],
+        'category':[],
+        'votes':[],
+        'price':[]
+    }
 
-def post_vote(url):
-    link = "{}.json".format(url)
-    post = requests.get(link).json()['post']
-    upvote = post['active_votes']
-    vote_list = [vote['voter'] for vote in upvote]
+    for blog in data:
+        if (datetime.now() - datetime.strptime(blog['created'], '%Y-%m-%dT%H:%M:%S')).days < 8 and author == blog['author']:
+            result['blog'].append(blog['url'])
+            result['tittle'].append(blog['title'])
+            result['category'].append(blog['category'])
+            result['votes'].append(blog['net_votes'])
+            result['price'].append(float(blog['pending_payout_value'].split(' ')[0]))
 
-    return vote_list
+    return result
 
-def post_follow(url):
-    author, permlink = parse_url(url)
+def convert(result):
+    new_result = {}
+    new_result['blog'] = db_con(result['blog'])
+    new_result['tittle'] = db_con(result['tittle'])
+    new_result['category'] = db_con(result['category'])
+    new_result['votes'] = db_con(result['votes'])
+    new_result['price'] = db_con(result['price'])
 
+    return new_result
+
+def db_con(old_d):
+    text = ''
+    for res in old_d:
+        text = text + ':::' +  str(res) 
+    return text
+
+def deconvert(result):
+    new_result = {}
+
+    new_result['blog'] = result['blog'].split(':::')[1:]
+    new_result['tittle'] = result['tittle'].split(':::')[1:]
+    new_result['category'] = result['category'].split(':::')[1:]
+    new_result['votes'] = result['votes'].split(':::')[1:]
+    new_result['price'] = result['price'].split(':::')[1:]
+
+    return new_result
+
+
+def category(blog_list):
+    url = 'https://api.steemjs.com/get_state?path=@{}'.format(author)
+    data = requests.get(url).json()
+    blog_list = data['content']
+    
+
+def ff_count(author):
     link = 'https://steemdb.com/api/accounts?account={}'.format(author)
 
     data = requests.get(link).json()[0]
-    return data['followers']
+    return data['followers_count'], data['following_count']
+
+def vesting_calculator(response):
+    vests_func = float(requests.get(VESTING_URL).text.split('1 VESTS =')[1].split('\t')[0].replace(' ',''))
+    
+    vesting = float(response['vesting_shares'].split(' ')[0]) 
+    vesting = vesting + float(response['received_vesting_shares'].split(' ')[0])
+    vesting = vesting - float(response['delegated_vesting_shares'].split(' ')[0])
+    
+    return vesting / 1e6 *  vests_func
+
+def vote_count(author):
+    url = 'https://api.steemjs.com/get_account_votes?voter={}'.format(author)
+    return len(requests.get(url).json())

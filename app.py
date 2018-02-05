@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, url_for, redirect, request, render_template
+from flask import Flask, url_for, redirect, request, render_template, abort
 
 from flask_admin import helpers, expose
 from flask_admin.contrib import sqla
@@ -15,6 +15,7 @@ from datetime import datetime
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
+from steemit import get_url, vesting_calculator, ff_count, vote_count, blog_list , convert
 
 app = Flask(__name__)
 
@@ -31,7 +32,6 @@ class Steemit_User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     steem_name = db.Column(db.String(200))
     post_key = db.Column(db.String(200))
-
 
     def __str__(self):
         return str(self.steem_name)
@@ -54,14 +54,15 @@ class Analiysis(db.Model):
     #
     following = db.Column(db.Integer())
     followers = db.Column(db.Integer())
-    Post = db.Column(db.Integer())
+    post = db.Column(db.Integer())
     #
     sp = db.Column(db.Integer())
     #
-    blog_post = db.Column(db.Integer())
-    comment = db.Column(db.Integer())
-    vote = db.Column(db.Integer())
-    
+    blog = db.Column(db.String())
+    tittle = db.Column(db.String())
+    category = db.Column(db.String())
+    votes = db.Column(db.String())
+    price = db.Column(db.String())
 
     __table_args__ = (
         UniqueConstraint("id", "end_date"),
@@ -187,18 +188,48 @@ def admin():
 def index():
     if request.query_string and request.args.get('account'):
         return redirect('/' + request.args.get('account'))
-    return render_template('index.html')
+    
+    return render_template('base.html')
 
 
 @app.route('/<username>')
 def details(username):
+
     if username.startswith("@"):
         username = username.replace("@", "")
-
+    status, response = get_url(username)
+    if not status:
+        return redirect('/')
+    
     if Steemit_User().get_users(username):
         pass #get db
     else:
-        pass #create
+        #
+        user = Steemit_User()
+        user.steem_name = username
+        #
+        session = Analiysis()
+        session.steemit_user = user
+
+        session.sp = vesting_calculator(response['user'])
+        session.post = response['user']['post_count'] 
+        session.start_date = datetime.strptime(response['user']['created'], '%Y-%m-%dT%H:%M:%S')
+        session.end_date = datetime.now()
+        session.followers, session.following  = ff_count(username)
+        
+        blog_result = blog_list(username)
+        blog_text = convert(blog_result)
+        session.blog = blog_text['blog']
+        session.tittle = blog_text['tittle']
+        session.category = blog_text['category']
+        session.votes = blog_text['votes'] 
+        session.price = blog_text['price']
+
+        db.session.add(session)
+        db.session.add(user)
+        db.session.commit()
+
+        
 
     return render_template('index.html', data=username)
 

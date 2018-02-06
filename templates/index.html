@@ -1,0 +1,111 @@
+
+{% extends "base.html" %}
+{% block content %}
+{% if result %}
+
+<div class="row align-center">
+
+        <div class="col col-3 offset-2">
+        Start: {{result['start_date'].strftime('%Y-%m-%d')}} 
+        </div>
+        
+        <div class="col col-3 offset-1">
+        End: {{result['end_date'].strftime('%Y-%m-%d')}} 
+        </div>
+
+</div>
+
+
+<div class="row align-center">
+    <div class="col col-10">
+<fieldset>
+    <legend>Analysis result:</legend> 
+    <p>Hello there! This is an analysis. It offers you activities for 1 week. For now, I'm just giving you some data on what you're doing. More detailed analyzes and presentations will be available in the near future.The following week, analyzes will be made with the old data. </p>
+
+<h3>General analysis</h3>
+<li>Followers count: {{result['followers']}}</li>
+<li>Following count: {{result['following']}}</li>
+<li>Post count: {{result['all_post']}}</li>
+<li>Steem Power: {{result['sp']}}</li>
+
+<hr>
+<h3>Weekly analysis</h3>
+<li>Rated vote received: {{result['sum_votes']}} </li>
+<li>Rated price received: {{result['sum_price']}} SBD </li>
+<li>This week publish {{result['sum_blog']}} blogs.</li>
+
+<li>Most voted post: ({{result['votes'][result['votes_max_id']]}}) - 
+    <a href="http://steemit.com{{result['blog'][result['votes_max_id']]}}"> {{result['tittle'][result['votes_max_id']]}}</a></li>
+
+<li>Most price post: ({{result['price'][result['price_max_id']]}} SBD) - 
+    <a href="http://steemit.com{{result['blog'][result['price_max_id']]}}"> {{result['tittle'][result['price_max_id']]}}</a></li>
+<li>Categories you use:
+    {% for categoriy in result['cetegory_uniqe'] %}
+    "{{categoriy}}",
+    {% endfor %}
+</li>
+<li>The category you use the most : {{result['cetegory_max']}} </li>
+<li>Quantity :{{result['cetegory_max_int']}} </li>
+
+<hr>
+
+<h3>Weekly Post</h3>
+
+<table class="bordered striped">
+    <tr> <td>ID</td> <td>Tittle</td> <td>Votes</td> <td>Price</td> </tr>
+    {% for item in result['blog'] %}
+    <tr>
+    <td>{{loop.index}}</td>
+    <td><a href="http://steemit.com{{item}}"> {{result['tittle'][loop.index0]}} </a> </td>
+    <td>{{result['votes'][loop.index0]}}</td>
+    <td>{{result['price'][loop.index0]}} SBD</td>
+
+    </tr>
+    {% endfor %}
+</table>
+    
+<h2> Markdown Style</h2>
+
+<textarea rows="12" cols="100">
+## General analysis
+- Followers count: {{result['followers']}}
+- Following count: {{result['following']}}
+- Post count: {{result['all_post']}}
+- Steem Power: {{result['sp']}}
+
+## Weekly analysis
+- Rated vote received: {{result['sum_votes']}}
+- Rated price received: {{result['sum_price']}} SBD
+- This week publish {{result['sum_blog']}} blogs
+- Most voted post: ({{result['votes'][result['votes_max_id']]}}) - [{{result['tittle'][result['votes_max_id']]}}](http://steemit.com{{result['blog'][result['votes_max_id']]}})
+- Most price post: ({{result['price'][result['price_max_id']]}} SBD) - [{{result['tittle'][result['price_max_id']]}}](http://steemit.com{{result['blog'][result['price_max_id']]}}) 
+- Categories you use: {% for categoriy in result['cetegory_uniqe'] %} "{{categoriy}}", {% endfor %}
+- The category you use the most : {{result['cetegory_max']}} 
+- Quantity :{{result['cetegory_max_int']}}
+
+## Weekly Post
+ID | Tittle | Votes | Price
+---|---|---|---|
+{% for item in result['blog'] -%}
+{{loop.index}} | [{{result['tittle'][loop.index0]|replace('|','')}}](http://steemit.com{{item}}) | {{result['votes'][loop.index0]}} | {{result['price'][loop.index0]}}
+{% endfor %}
+</textarea>
+
+</fieldset>
+</div>
+</div>
+
+
+{% if result.error %}
+<h2> 
+{{data.error}}
+</h2> 
+
+{% endif %}
+
+
+{% else %}
+	
+
+{% endif %}
+{% endblock %}

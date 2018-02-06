@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block form %}
+
+<div class="row align-center">
+        <div class="col col-6">
+            <fieldset>
+            <legend>Analysis Request</legend>
+            <p></p>
+            
+            <form method="get">
+    
+            <div class="row align-center">
+                <div class="form-item">
+                    <div class="prepend w500">
+                        <span>Post link</span>
+                        <input placeholder="Username" name="account" id="autocomplete">
+                    </div>
+    <br>
+    
+                </div>
+            </div>
+            <div class="row align-center">
+                <div class="form-item align-center">
+                    <button id="save" >Show</button> 
+                </div>
+            </div>
+    
+            </form>
+        </fieldset>
+    
+        </div>
+    </div>
+
+{% endblock %}

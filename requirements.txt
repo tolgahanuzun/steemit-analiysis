@@ -1,0 +1,6 @@
+sqlalchemy==1.2.0b3
+requests
+flask
+flask_admin
+flask_login
+flask_sqlalchemy

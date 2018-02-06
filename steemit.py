@@ -10,7 +10,7 @@ def get_url(url):
     link = "https://steemit.com/@{}.json".format(url)
     response = requests.get(link)
 
-    if response.status_code == 200:
+    if response.json()['status'] == '200':
         return True , response.json()
 
     return False, None

@@ -190,7 +190,7 @@ def index():
     if request.query_string and request.args.get('account'):
         return redirect('/' + request.args.get('account'))
     
-    return render_template('base.html')
+    return render_template('form.html')
 
 
 @app.route('/<username>')
@@ -199,6 +199,7 @@ def details(username):
     if username.startswith("@"):
         username = username.replace("@", "")
     status, response = get_url(username)
+    
     if not status:
         return redirect('/')
     
@@ -270,6 +271,7 @@ def analiysis(username, count):
     result['cetegory_max_int'] = counter[result['cetegory_max']]
     
     return render_template('index.html', result=result)
+
 # Initialize flask-login
 init_login()
 

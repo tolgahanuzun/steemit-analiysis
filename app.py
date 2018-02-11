@@ -1,22 +1,23 @@
 import os
 from collections import Counter
+from datetime import datetime
 
 from flask import Flask, url_for, redirect, request, render_template, abort
-
-from flask_admin import helpers, expose
+from flask_admin import base, helpers, expose
 from flask_admin.contrib import sqla
 from flask_sqlalchemy import SQLAlchemy
-from wtforms import form, fields, validators
-from flask_admin import base
 from sqlalchemy import UniqueConstraint
+from wtforms import form, fields, validators
+from werkzeug.security import generate_password_hash, check_password_hash
 
 import flask_admin as admin
 import flask_login as login
-from datetime import datetime
 
-from werkzeug.security import generate_password_hash, check_password_hash
 
 from steemit import get_url, vesting_calculator, ff_count, vote_count, blog_list, convert, deconvert
+
+import atexit
+from apscheduler.scheduler import Scheduler
 
 app = Flask(__name__)
 
@@ -243,8 +244,9 @@ def analiysis(username, count):
     if not user:
         abort(404)
 
-    analiysis = Analiysis.query.filter_by(steemit_user=user).all()[count-1]
-
+    analiysis = Analiysis.query.filter_by(steemit_user=user).all()
+    #import ipdb; ipdb.set_trace()
+    analiysis = analiysis[count-1]
     result = {
         "blog": deconvert(analiysis.blog),
         "tittle": deconvert(analiysis.tittle),
@@ -291,8 +293,21 @@ def build_sample_db():
     db.session.add(test_user)
     db.session.commit()
     return
+
+def task():
+    cron = Scheduler(daemon=True)
+    cron.start()
+
+    @cron.interval_schedule(minutes=1)
+    def job_function():
+        pass #job func
+
+    atexit.register(lambda: cron.shutdown(wait=False))
+
 if __name__ == '__main__':
-    # Build a sample db on the fly, if one does not exist yet.
+    task()
+
+    #main
     app_dir = os.path.realpath(os.path.dirname(__file__))
     database_path = os.path.join(app_dir, app.config['DATABASE_FILE'])
     if not os.path.exists(database_path):

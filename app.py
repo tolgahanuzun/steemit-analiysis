@@ -207,9 +207,13 @@ def details(username):
     get_all_user = Steemit_User().get_users(username)
 
     if get_all_user:
-        import ipdb; ipdb.set_trace()
-        if Analiysis().query.filter_by(steemit_user_id=get_all_user.id).count() > 1:
-            pass # Karşılaştırma Template
+        analysis_self = Analiysis().query.filter_by(steemit_user_id=get_all_user.id)
+        if analysis_self.count() > 1:
+
+            end_date = analysis_self.all()[-1].end_date
+            analiz_create(response, get_all_user, username, end_date)
+            
+            return redirect('/{}/analiysis/{}'.format(username, analysis_self.count()))            
         else:
             return redirect('/{}/analiysis/1'.format(username))
     else:
@@ -231,7 +235,6 @@ def analiysis(username, count):
         abort(404)
 
     analiysis = Analiysis.query.filter_by(steemit_user=user).all()
-    #import ipdb; ipdb.set_trace()
     analiysis = analiysis[count-1]
     result = {
         "blog": deconvert(analiysis.blog),
@@ -258,17 +261,25 @@ def analiysis(username, count):
     result['cetegory_max'] = max(result['cetegory_uniqe'])
     result['cetegory_max_int'] = counter[result['cetegory_max']]
     
+    if count > 1:
+        pass # last daha comparison
+
     return render_template('index.html', result=result)
 
 # Create
-def analiz_create(response, user, username):
+def analiz_create(response, user, username, ending_date = False):
     session = Analiysis()
     session.steemit_user = user
 
     session.sp = vesting_calculator(response['user'])
     session.post = response['user']['post_count'] 
-    session.start_date = datetime.strptime(response['user']['created'], '%Y-%m-%dT%H:%M:%S')
-    session.end_date = datetime.now()
+    if ending_date: 
+        session.start_date = ending_date
+        session.end_date = datetime.now()
+    else:
+        session.start_date = datetime.strptime(response['user']['created'], '%Y-%m-%dT%H:%M:%S')
+        session.end_date = datetime.now()
+    
     session.followers, session.following  = ff_count(username)
     
     blog_result = blog_list(username)
@@ -282,6 +293,7 @@ def analiz_create(response, user, username):
     db.session.add(session)
     db.session.add(user)
     db.session.commit()
+    
 
 # Initialize flask-login
 init_login()

@@ -235,6 +235,9 @@ def analiysis(username, count):
         abort(404)
 
     analiysis_all = Analiysis.query.filter_by(steemit_user=user).all()
+    if count > len(analiysis_all):
+        abort(404)
+    
     analiysis = analiysis_all[count-1]
     result = {
         "blog": deconvert(analiysis.blog),
@@ -265,15 +268,28 @@ def analiysis(username, count):
         analiysis_last = analiysis_all[count-2]
         result['difference'] = {
             'sp': analiysis_last.sp - analiysis.sp,
-            'followers': analiysis_last.followers - analiysis.followers,
-            'following': analiysis_last.following - analiysis.following,
-            'all_post': analiysis_last.post - analiysis.post,
-            "sum_votes": sum([float(x) for x in deconvert(analiysis_last.votes)]) - sum([float(x) for x in deconvert(analiysis.votes)]),
-            "sum_price": sum([float(x) for x in deconvert(analiysis_last.price)]) - sum([float(x) for x in deconvert(analiysis.price)]),
-            "sum_blog": len(deconvert(analiysis_last.blog)) - len(deconvert(analiysis.blog))
+            'followers': analiysis.followers - analiysis_last.followers,
+            'following': analiysis.following - analiysis_last.following,
+            'all_post': analiysis.post - analiysis_last.post,
+            "sum_votes": sum([float(x) for x in deconvert(analiysis.votes)]) - sum([float(x) for x in deconvert(analiysis_last.votes)]),
+            "sum_price": sum([float(x) for x in deconvert(analiysis.price)]) - sum([float(x) for x in deconvert(analiysis_last.price)]),
+            "sum_blog": len(deconvert(analiysis.blog)) - len(deconvert(analiysis_last.blog)),
+            "pug_num": count
         }
 
-    return render_template('index.html', result=result)
+    return render_template('index.html', result=result, username=username)
+
+@app.route('/<username>/list')
+def analiysis_list(username):
+    if username.startswith("@"):
+        username = username.replace("@", "")
+    user = Steemit_User().get_users(username)
+    if not user:
+        abort(404)
+
+    analiysis_all = Analiysis.query.filter_by(steemit_user=user).all()
+
+    return render_template('list.html', result=analiysis_all, username = username)
 
 # Create
 def analiz_create(response, user, username, ending_date = False):
@@ -330,15 +346,14 @@ def task():
 
     @cron.interval_schedule(minutes=1)
     def job_function():
-        import ipdb; ipdb.set_trace()
         all_user = Steemit_User().query.all()
         for user in all_user:
             analysis_self = Analiysis().query.filter_by(steemit_user_id=user.id)
-            if analysis_self.count() > 1:
-                end_date = analysis_self.all()[-1].end_date
-                if (datetime.now() - end_date).total_seconds() / 86400 > 6.99:
-                    status, response = get_url(username)
-                    analiz_create(response, user, user.steem_name, end_date)
+            end_date = analysis_self.all()[-1].end_date
+            week_control = (datetime.now() - end_date).total_seconds()
+            if week_control / 86400 > 6.99:
+                status, response = get_url(user.steem_name)
+                analiz_create(response, user, user.steem_name, end_date)
 
     atexit.register(lambda: cron.shutdown(wait=False))
 

@@ -20,14 +20,13 @@
     <div class="col col-10">
 <fieldset>
     <legend>Analysis result:</legend> 
-    <p>Hello there! This is an analysis. It offers you activities for 1 week. For now, I'm just giving you some data on what you're doing. More detailed analyzes and presentations will be available in the near future.The following week, analyzes will be made with the old data. </p>
-    {% if result['difference'] %}
+{% if result['difference'] %}
 <h3>General analysis | Compared to the previous week.</h3>
 <li>Followers count: {{result['followers']}} | According to the previous week: {{result['difference']['followers']}} </li>
 <li>Following count: {{result['following']}} | According to the previous week: {{result['difference']['following']}} </li>
 <li>Post count: {{result['all_post']}} | According to the previous week: {{result['difference']['all_post']}} </li>
 <li>Steem Power: {{result['sp']}} | According to the previous week: {{result['difference']['followers']}} </li>
-
+<br>
 <hr>
 <h3>Weekly analysis | Compared to the previous week.</h3>
 <li>Rated vote received: {{result['sum_votes']}} | According to the previous week: {{result['difference']['sum_votes']}} </li>
@@ -40,6 +39,7 @@
 <li>Post count: {{result['all_post']}}</li>
 <li>Steem Power: {{result['sp']}}</li>
 
+<br>
 <hr>
 <h3>Weekly analysis</h3>
 <li>Rated vote received: {{result['sum_votes']}} </li>
@@ -58,8 +58,8 @@
     {% endfor %}
 </li>
 <li>The category you use the most : {{result['cetegory_max']}} </li>
-<li>Quantity :{{result['cetegory_max_int']}} </li>
-
+<li>Quantity : {{result['cetegory_max_int']}} </li>
+<br>
 <hr>
 
 <h3>Weekly Post</h3>

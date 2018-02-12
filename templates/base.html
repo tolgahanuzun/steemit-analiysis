@@ -12,14 +12,14 @@
     <nav id="tabs" class="tabs" data-component="tabs">
             <ul>
                 <li><a href="/">Home</a></li>
-
+                {% if username %}
+                <li><a href="/{{username}}/list">{{username.title()}} - Weekly List</a></li>
+                {% endif %}
             </ul>
         </nav>
     {% block form %}{% endblock %}
 
-        
     <div id='slide'>
-        
         {% block content %}{% endblock %}
     </div>
     

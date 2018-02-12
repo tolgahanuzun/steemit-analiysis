@@ -21,8 +21,20 @@
 <fieldset>
     <legend>Analysis result:</legend> 
     <p>Hello there! This is an analysis. It offers you activities for 1 week. For now, I'm just giving you some data on what you're doing. More detailed analyzes and presentations will be available in the near future.The following week, analyzes will be made with the old data. </p>
+    {% if result['difference'] %}
+<h3>General analysis | Compared to the previous week.</h3>
+<li>Followers count: {{result['followers']}} | According to the previous week: {{result['difference']['followers']}} </li>
+<li>Following count: {{result['following']}} | According to the previous week: {{result['difference']['following']}} </li>
+<li>Post count: {{result['all_post']}} | According to the previous week: {{result['difference']['all_post']}} </li>
+<li>Steem Power: {{result['sp']}} | According to the previous week: {{result['difference']['followers']}} </li>
 
-<h3>General analysis</h3>
+<hr>
+<h3>Weekly analysis | Compared to the previous week.</h3>
+<li>Rated vote received: {{result['sum_votes']}} | According to the previous week: {{result['difference']['sum_votes']}} </li>
+<li>Rated price received: {{result['sum_price']}} SBD | According to the previous week: {{result['difference']['sum_price']}} </li>
+<li>This week publish {{result['sum_blog']}} blogs | According to the previous week: {{result['difference']['sum_blog']}} </li>
+    {% else %}
+    <h3>General analysis</h3>
 <li>Followers count: {{result['followers']}}</li>
 <li>Following count: {{result['following']}}</li>
 <li>Post count: {{result['all_post']}}</li>
@@ -32,8 +44,9 @@
 <h3>Weekly analysis</h3>
 <li>Rated vote received: {{result['sum_votes']}} </li>
 <li>Rated price received: {{result['sum_price']}} SBD </li>
-<li>This week publish {{result['sum_blog']}} blogs.</li>
+<li>This week publish {{result['sum_blog']}} blogs </li>
 
+    {% endif %}
 <li>Most voted post: ({{result['votes'][result['votes_max_id']]}}) - 
     <a href="http://steemit.com{{result['blog'][result['votes_max_id']]}}"> {{result['tittle'][result['votes_max_id']]}}</a></li>
 
@@ -67,6 +80,18 @@
 <h2> Markdown Style</h2>
 
 <textarea rows="12" cols="100">
+{% if result['difference'] %}
+## General analysis | Compared to the previous week.
+- Followers count: {{result['followers']}} | According to the previous week: {{result['difference']['followers']}}
+- Following count: {{result['following']}} | According to the previous week: {{result['difference']['following']}}
+- Post count: {{result['all_post']}} | According to the previous week: {{result['difference']['all_post']}}
+- Steem Power: {{result['sp']}} | According to the previous week: {{result['difference']['sp']}}
+
+## Weekly analysis | Compared to the previous week.
+- Rated vote received: {{result['sum_votes']}} | According to the previous week: {{result['difference']['sum_votes']}}
+- Rated price received: {{result['sum_price']}} SBD | According to the previous week: {{result['difference']['sum_price']}}
+- This week publish {{result['sum_blog']}} blogs | According to the previous week: {{result['difference']['sum_blog']}}
+{% else %}
 ## General analysis
 - Followers count: {{result['followers']}}
 - Following count: {{result['following']}}
@@ -77,6 +102,7 @@
 - Rated vote received: {{result['sum_votes']}}
 - Rated price received: {{result['sum_price']}} SBD
 - This week publish {{result['sum_blog']}} blogs
+{% endif %}
 - Most voted post: ({{result['votes'][result['votes_max_id']]}}) - [{{result['tittle'][result['votes_max_id']]}}](http://steemit.com{{result['blog'][result['votes_max_id']]}})
 - Most price post: ({{result['price'][result['price_max_id']]}} SBD) - [{{result['tittle'][result['price_max_id']]}}](http://steemit.com{{result['blog'][result['price_max_id']]}}) 
 - Categories you use: {% for categoriy in result['cetegory_uniqe'] %} "{{categoriy}}", {% endfor %}

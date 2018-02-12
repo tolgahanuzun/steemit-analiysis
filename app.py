@@ -211,7 +211,7 @@ def details(username):
         if analysis_self.count() > 1:
 
             end_date = analysis_self.all()[-1].end_date
-            analiz_create(response, get_all_user, username, end_date)
+            #analiz_create(response, get_all_user, username, end_date)
             
             return redirect('/{}/analiysis/{}'.format(username, analysis_self.count()))            
         else:

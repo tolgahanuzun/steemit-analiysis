@@ -1,22 +1,23 @@
 import os
 from collections import Counter
+from datetime import datetime
 
 from flask import Flask, url_for, redirect, request, render_template, abort
-
-from flask_admin import helpers, expose
+from flask_admin import base, helpers, expose
 from flask_admin.contrib import sqla
 from flask_sqlalchemy import SQLAlchemy
-from wtforms import form, fields, validators
-from flask_admin import base
 from sqlalchemy import UniqueConstraint
+from wtforms import form, fields, validators
+from werkzeug.security import generate_password_hash, check_password_hash
 
 import flask_admin as admin
 import flask_login as login
-from datetime import datetime
 
-from werkzeug.security import generate_password_hash, check_password_hash
 
 from steemit import get_url, vesting_calculator, ff_count, vote_count, blog_list, convert, deconvert
+
+import atexit
+from apscheduler.scheduler import Scheduler
 
 app = Flask(__name__)
 
@@ -202,37 +203,27 @@ def details(username):
     
     if not status:
         return redirect('/')
-    
-    if Steemit_User().get_users(username):
-        return redirect('/{}/analiysis/1'.format(username))
+
+    get_all_user = Steemit_User().get_users(username)
+
+    if get_all_user:
+        analysis_self = Analiysis().query.filter_by(steemit_user_id=get_all_user.id)
+        if analysis_self.count() > 1:
+
+            end_date = analysis_self.all()[-1].end_date
+            #analiz_create(response, get_all_user, username, end_date)
+            
+            return redirect('/{}/analiysis/{}'.format(username, analysis_self.count()))            
+        else:
+            return redirect('/{}/analiysis/1'.format(username))
     else:
         #
         user = Steemit_User()
         user.steem_name = username
         #
-        session = Analiysis()
-        session.steemit_user = user
-
-        session.sp = vesting_calculator(response['user'])
-        session.post = response['user']['post_count'] 
-        session.start_date = datetime.strptime(response['user']['created'], '%Y-%m-%dT%H:%M:%S')
-        session.end_date = datetime.now()
-        session.followers, session.following  = ff_count(username)
-        
-        blog_result = blog_list(username)
-        blog_text = convert(blog_result)
-        session.blog = blog_text['blog']
-        session.tittle = blog_text['tittle']
-        session.category = blog_text['category']
-        session.votes = blog_text['votes'] 
-        session.price = blog_text['price']
-
-        db.session.add(session)
-        db.session.add(user)
-        db.session.commit()
+        analiz_create(response, user, username)
 
     return redirect('/{}/analiysis/1'.format(username))
-
 
 @app.route('/<username>/analiysis/', defaults={'count': 1})
 @app.route('/<username>/analiysis/<int:count>')
@@ -243,8 +234,11 @@ def analiysis(username, count):
     if not user:
         abort(404)
 
-    analiysis = Analiysis.query.filter_by(steemit_user=user).all()[count-1]
-
+    analiysis_all = Analiysis.query.filter_by(steemit_user=user).all()
+    if count > len(analiysis_all):
+        abort(404)
+    
+    analiysis = analiysis_all[count-1]
     result = {
         "blog": deconvert(analiysis.blog),
         "tittle": deconvert(analiysis.tittle),
@@ -270,7 +264,61 @@ def analiysis(username, count):
     result['cetegory_max'] = max(result['cetegory_uniqe'])
     result['cetegory_max_int'] = counter[result['cetegory_max']]
     
-    return render_template('index.html', result=result)
+    if count > 1:
+        analiysis_last = analiysis_all[count-2]
+        result['difference'] = {
+            'sp': analiysis_last.sp - analiysis.sp,
+            'followers': analiysis.followers - analiysis_last.followers,
+            'following': analiysis.following - analiysis_last.following,
+            'all_post': analiysis.post - analiysis_last.post,
+            "sum_votes": sum([float(x) for x in deconvert(analiysis.votes)]) - sum([float(x) for x in deconvert(analiysis_last.votes)]),
+            "sum_price": sum([float(x) for x in deconvert(analiysis.price)]) - sum([float(x) for x in deconvert(analiysis_last.price)]),
+            "sum_blog": len(deconvert(analiysis.blog)) - len(deconvert(analiysis_last.blog)),
+            "pug_num": count
+        }
+
+    return render_template('index.html', result=result, username=username)
+
+@app.route('/<username>/list')
+def analiysis_list(username):
+    if username.startswith("@"):
+        username = username.replace("@", "")
+    user = Steemit_User().get_users(username)
+    if not user:
+        abort(404)
+
+    analiysis_all = Analiysis.query.filter_by(steemit_user=user).all()
+
+    return render_template('list.html', result=analiysis_all, username = username)
+
+# Create
+def analiz_create(response, user, username, ending_date = False):
+    session = Analiysis()
+    session.steemit_user = user
+
+    session.sp = vesting_calculator(response['user'])
+    session.post = response['user']['post_count'] 
+    if ending_date: 
+        session.start_date = ending_date
+        session.end_date = datetime.now()
+    else:
+        session.start_date = datetime.strptime(response['user']['created'], '%Y-%m-%dT%H:%M:%S')
+        session.end_date = datetime.now()
+    
+    session.followers, session.following  = ff_count(username)
+    
+    blog_result = blog_list(username)
+    blog_text = convert(blog_result)
+    session.blog = blog_text['blog']
+    session.tittle = blog_text['tittle']
+    session.category = blog_text['category']
+    session.votes = blog_text['votes'] 
+    session.price = blog_text['price']
+
+    db.session.add(session)
+    db.session.add(user)
+    db.session.commit()
+    
 
 # Initialize flask-login
 init_login()
@@ -291,8 +339,28 @@ def build_sample_db():
     db.session.add(test_user)
     db.session.commit()
     return
+
+def task():
+    cron = Scheduler(daemon=True)
+    cron.start()
+
+    @cron.interval_schedule(minutes=1)
+    def job_function():
+        all_user = Steemit_User().query.all()
+        for user in all_user:
+            analysis_self = Analiysis().query.filter_by(steemit_user_id=user.id)
+            end_date = analysis_self.all()[-1].end_date
+            week_control = (datetime.now() - end_date).total_seconds()
+            if week_control / 86400 > 6.99:
+                status, response = get_url(user.steem_name)
+                analiz_create(response, user, user.steem_name, end_date)
+
+    atexit.register(lambda: cron.shutdown(wait=False))
+
 if __name__ == '__main__':
-    # Build a sample db on the fly, if one does not exist yet.
+    task()
+
+    #main
     app_dir = os.path.realpath(os.path.dirname(__file__))
     database_path = os.path.join(app_dir, app.config['DATABASE_FILE'])
     if not os.path.exists(database_path):

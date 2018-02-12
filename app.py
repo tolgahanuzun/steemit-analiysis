@@ -234,8 +234,8 @@ def analiysis(username, count):
     if not user:
         abort(404)
 
-    analiysis = Analiysis.query.filter_by(steemit_user=user).all()
-    analiysis = analiysis[count-1]
+    analiysis_all = Analiysis.query.filter_by(steemit_user=user).all()
+    analiysis = analiysis_all[count-1]
     result = {
         "blog": deconvert(analiysis.blog),
         "tittle": deconvert(analiysis.tittle),
@@ -262,7 +262,16 @@ def analiysis(username, count):
     result['cetegory_max_int'] = counter[result['cetegory_max']]
     
     if count > 1:
-        pass # last daha comparison
+        analiysis_last = analiysis_all[count-2]
+        result['difference'] = {
+            'sp': analiysis_last.sp - analiysis.sp,
+            'followers': analiysis_last.followers - analiysis.followers,
+            'following': analiysis_last.following - analiysis.following,
+            'all_post': analiysis_last.post - analiysis.post,
+            "sum_votes": sum([float(x) for x in deconvert(analiysis_last.votes)]) - sum([float(x) for x in deconvert(analiysis.votes)]),
+            "sum_price": sum([float(x) for x in deconvert(analiysis_last.price)]) - sum([float(x) for x in deconvert(analiysis.price)]),
+            "sum_blog": len(deconvert(analiysis_last.blog)) - len(deconvert(analiysis.blog))
+        }
 
     return render_template('index.html', result=result)
 

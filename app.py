@@ -330,7 +330,15 @@ def task():
 
     @cron.interval_schedule(minutes=1)
     def job_function():
-        pass #job func
+        import ipdb; ipdb.set_trace()
+        all_user = Steemit_User().query.all()
+        for user in all_user:
+            analysis_self = Analiysis().query.filter_by(steemit_user_id=user.id)
+            if analysis_self.count() > 1:
+                end_date = analysis_self.all()[-1].end_date
+                if (datetime.now() - end_date).total_seconds() / 86400 > 6.99:
+                    status, response = get_url(username)
+                    analiz_create(response, user, user.steem_name, end_date)
 
     atexit.register(lambda: cron.shutdown(wait=False))
 
